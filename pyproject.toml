@@ -1,0 +1,13 @@
+[project]
+name = "g1ki-angebotsabgleich"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "langchain>=1.2.10",
+    "langchain-chroma>=1.1.0",
+    "langchain-community>=0.4.1",
+    "langchain-google-genai>=4.2.0",
+    "pypdf>=6.7.1",
+    "streamlit>=1.54.0",
+]

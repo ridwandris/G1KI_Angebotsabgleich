@@ -100,6 +100,23 @@ ipython_config.py
 #   commonly ignored for libraries.
 #uv.lock
 
+
+# --- Database / Vector Store ---
+.chroma_angebot/
+.chroma_konzept/
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+
+# --- Streamlit ---
+.streamlit/
+
+
+# --- OS Junk Files ---
+.DS_Store
+Thumbs.db
+
+
 # poetry
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
@@ -135,6 +152,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+.venv/
 .env
 .envrc
 .venv
@@ -143,6 +161,10 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# --- Python Virtual Environment ---
+__pycache__/
+*.pyc
 
 # Spyder project settings
 .spyderproject
