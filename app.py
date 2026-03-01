@@ -14,6 +14,8 @@ from compare_rag import (
     MODEL,
     KONZEPT_PDF,
     ANGEBOT_PDF,
+    EMBEDDING_MODEL,
+    MAX_WORKERS,
     run_abgleich,
     save_report,
     COMPATIBILITY_CHECKS,
@@ -69,14 +71,16 @@ with st.sidebar:
     )
     st.title("⚙️ Einstellungen")
 
-    st.markdown(f"**Modell:** `{MODEL}`")
+    st.markdown(f"**LLM:** `{MODEL}`")
+    st.markdown(f"**Embedding:** `{EMBEDDING_MODEL}`")
+    st.markdown(f"**Parallel:** max {MAX_WORKERS} gleichzeitig")
 
     sleep_secs = st.slider(
         "Pause zwischen API-Aufrufen (s)",
-        min_value=1,
-        max_value=10,
-        value=2,
-        help="Schützt vor Rate-Limit-Fehlern im Free-Tier",
+        min_value=0,
+        max_value=5,
+        value=0,
+        help="Pause nach jedem LLM-Aufruf. Bei 0 wird voll parallel gearbeitet.",
     )
 
     st.markdown("---")
@@ -91,7 +95,7 @@ with st.sidebar:
 
 
 # ── Header ─────────────────────────────────────────────────────────────────────
-st.title("🔥 Angebotsabgleich – Löschanlagenkonzept")
+st.title("Angebotsabgleich – Löschanlagenkonzept")
 st.markdown(
     "Prüft automatisch, ob die **Komponentenliste** alle Anforderungen des "
     "**Löschanlagenkonzepts** vollständig erfüllt."
@@ -181,7 +185,7 @@ if "abgleich_data" in st.session_state:
             }
             for r in results
         ])
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
 
     # ---------- Per-category sections -----------------------------------------
     st.markdown("---")

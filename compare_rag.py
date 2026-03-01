@@ -12,21 +12,32 @@ Verwendet auch von:  app.py (Streamlit-UI)
 
 import os
 import time
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-# ── API key & model (hardcoded) ───────────────────────────────────────────────
-GOOGLE_API_KEY = "AIzaSyCRU2z7jggNYbi4AIHD9Skke1uyKdHM2t8"
-MODEL          = "gemini-3-flash-preview"
+# ── Load .env file ────────────────────────────────────────────────────────────
+load_dotenv()
+
+# ── GWDG SAIA API configuration ──────────────────────────────────────────────
+GWDG_API_KEY    = os.environ.get("GWDG_API_KEY", "")
+GWDG_BASE_URL   = os.environ.get("GWDG_BASE_URL", "https://chat-ai.academiccloud.de/v1")
+MODEL           = "llama-3.3-70b-instruct"
+EMBEDDING_MODEL = "multilingual-e5-large-instruct"
 
 # Keep alias so any external reference still works
 MODEL_FLASH = MODEL
+
+# ── Concurrency settings ─────────────────────────────────────────────────────
+MAX_WORKERS = 5  # parallel LLM calls
 
 # ── File paths ─────────────────────────────────────────────────────────────────
 KONZEPT_PDF      = "Loeschanlagenkonzept.pdf"
@@ -224,8 +235,8 @@ SUMMARY_PROMPT = ChatPromptTemplate.from_template(
 
 
 def ensure_api_key() -> str:
-    os.environ.setdefault("GOOGLE_API_KEY", GOOGLE_API_KEY)
-    return GOOGLE_API_KEY
+    os.environ.setdefault("OPENAI_API_KEY", GWDG_API_KEY)
+    return GWDG_API_KEY
 
 
 def load_pdf(path: str | Path) -> list:
@@ -236,9 +247,10 @@ def load_pdf(path: str | Path) -> list:
 
 
 def build_vectorstore(docs: list, api_key: str, persist_dir: str | None = None):
-    embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/gemini-embedding-001",
-        google_api_key=api_key,
+    embeddings = OpenAIEmbeddings(
+        model=EMBEDDING_MODEL,
+        openai_api_key=api_key,
+        openai_api_base=GWDG_BASE_URL,
     )
     if persist_dir and Path(persist_dir).exists():
         print(f"  ♻️  Lade gespeicherte ChromaDB aus '{persist_dir}' …")
@@ -255,14 +267,14 @@ def get_context(vectorstore: Chroma, query: str, k: int = 5) -> str:
 
 
 def _invoke_with_retry(chain, inputs, max_retries=5):
-    """Call chain.invoke with exponential backoff on 429 RESOURCE_EXHAUSTED."""
-    delay = 15  # initial wait in seconds
+    """Call chain.invoke with exponential backoff on rate-limit errors."""
+    delay = 5  # initial wait in seconds
     for attempt in range(max_retries):
         try:
             return chain.invoke(inputs)
         except Exception as exc:
-            msg = str(exc)
-            if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+            msg = str(exc).lower()
+            if "429" in msg or "rate" in msg or "resource_exhausted" in msg or "too many" in msg:
                 wait = delay * (2 ** attempt)
                 print(f"\n  ⏳ Rate limit hit – waiting {wait}s (attempt {attempt+1}/{max_retries}) …",
                       flush=True)
@@ -308,10 +320,15 @@ def run_check(check, vs_konzept, vs_angebot, llm, sleep_between=2.0):
     }
 
 
-def run_abgleich(api_key=None, model_name=None, sleep_between=2.0, progress_callback=None):
-    api_key    = api_key    or GOOGLE_API_KEY
+def run_abgleich(api_key=None, model_name=None, sleep_between=0.0, progress_callback=None):
+    api_key    = api_key    or GWDG_API_KEY
     model_name = model_name or MODEL
-    llm = ChatGoogleGenerativeAI(model=model_name, temperature=0, google_api_key=api_key)
+    llm = ChatOpenAI(
+        model=model_name,
+        temperature=0,
+        openai_api_key=api_key,
+        openai_api_base=GWDG_BASE_URL,
+    )
 
     if progress_callback:
         progress_callback(0.0, "Lade PDFs …")
@@ -323,15 +340,39 @@ def run_abgleich(api_key=None, model_name=None, sleep_between=2.0, progress_call
     vs_konzept, _ = build_vectorstore(konzept_docs, api_key, CHROMA_DIR_KONZEPT)
     vs_angebot, _ = build_vectorstore(angebot_docs, api_key, CHROMA_DIR_ANGEBOT)
 
-    results = []
+    results = [None] * len(COMPATIBILITY_CHECKS)
     total = len(COMPATIBILITY_CHECKS)
     t_start = time.perf_counter()
 
-    for i, check in enumerate(COMPATIBILITY_CHECKS):
-        if progress_callback:
-            pct = 0.10 + (i / total) * 0.80
-            progress_callback(pct, f"[{check['id']}] {check['title'][:65]} …")
-        results.append(run_check(check, vs_konzept, vs_angebot, llm, sleep_between))
+    if progress_callback:
+        progress_callback(0.10, f"Starte {total} Prüfungen parallel (max {MAX_WORKERS} gleichzeitig) …")
+
+    # ── Run checks concurrently for speed ────────────────────────────────────
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        future_to_info = {
+            executor.submit(run_check, check, vs_konzept, vs_angebot, llm, sleep_between): (i, check)
+            for i, check in enumerate(COMPATIBILITY_CHECKS)
+        }
+        done_count = 0
+        for future in as_completed(future_to_info):
+            idx, check = future_to_info[future]
+            try:
+                results[idx] = future.result()
+            except Exception as exc:
+                results[idx] = {
+                    "id": check["id"],
+                    "category": check["category"],
+                    "title": check["title"],
+                    "verdict": "UNKLAR",
+                    "reasoning": f"Fehler: {exc}",
+                    "gaps": "",
+                    "time_s": 0,
+                    "raw": str(exc),
+                }
+            done_count += 1
+            if progress_callback:
+                pct = 0.10 + (done_count / total) * 0.80
+                progress_callback(pct, f"[{check['id']}] fertig ({done_count}/{total})")
 
     if progress_callback:
         progress_callback(0.92, "Erstelle Gesamtbewertung …")
@@ -343,7 +384,6 @@ def run_abgleich(api_key=None, model_name=None, sleep_between=2.0, progress_call
     )
     summary_chain = SUMMARY_PROMPT | llm | StrOutputParser()
     summary = _invoke_with_retry(summary_chain, {"all_results": summary_text})
-    time.sleep(sleep_between)
 
     if progress_callback:
         progress_callback(1.0, "Abgeschlossen ✅")
@@ -404,7 +444,9 @@ if __name__ == "__main__":
         bar = "#" * int(frac * 30)
         print(f"\r  [{bar:<30}] {msg:<70}", end="", flush=True)
 
-    print(f"\n🔍  Angebotsabgleich – {KONZEPT_PDF} vs. {ANGEBOT_PDF}\n")
+    print(f"\n🔍  Angebotsabgleich – {KONZEPT_PDF} vs. {ANGEBOT_PDF}")
+    print(f"    API: GWDG SAIA  |  Modell: {MODEL}  |  Embedding: {EMBEDDING_MODEL}")
+    print(f"    Parallel: max {MAX_WORKERS} gleichzeitige Prüfungen\n")
 
     for model in [MODEL]:
         print(f"\n{'='*60}\nModell: {model}\n{'='*60}")
