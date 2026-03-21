@@ -69,7 +69,7 @@ with st.sidebar:
         "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Fire_extinguisher.svg/64px-Fire_extinguisher.svg.png",
         width=48,
     )
-    st.title("⚙️ Einstellungen")
+    st.title("Einstellungen")
 
     st.markdown(f"**LLM:** `{MODEL}`")
     st.markdown(f"**Embedding:** `{EMBEDDING_MODEL}`")
@@ -103,13 +103,13 @@ st.markdown(
 
 col_k, col_a = st.columns(2)
 with col_k:
-    st.info(f"📋 **Konzept (Pflichtenheft):**  `{KONZEPT_PDF}`")
+    st.info(f"**Konzept (Pflichtenheft):**  `{KONZEPT_PDF}`")
 with col_a:
-    st.info(f"📦 **Angebot (Komponentenliste):**  `{ANGEBOT_PDF}`")
+    st.info(f"**Angebot (Komponentenliste):**  `{ANGEBOT_PDF}`")
 
 if not konzept_exists or not angebot_exists:
     st.error(
-        "⚠️ Eine oder beide PDF-Dateien fehlen im Projektverzeichnis. "
+        "Eine oder beide PDF-Dateien fehlen im Projektverzeichnis. "
         f"Benötigt: `{KONZEPT_PDF}` und `{ANGEBOT_PDF}`"
     )
     st.stop()
@@ -134,7 +134,7 @@ if run_btn:
             progress_callback=on_progress,
         )
         st.session_state["abgleich_data"] = data
-        progress_bar.progress(1.0, text="Abgleich abgeschlossen ✅")
+        progress_bar.progress(1.0, text="Abgleich abgeschlossen")
         status_box.empty()
         st.success(f"Abgleich abgeschlossen in {data['elapsed_total']} s")
     except Exception as exc:
@@ -148,7 +148,7 @@ if "abgleich_data" in st.session_state:
 
     # ---------- Summary card --------------------------------------------------
     st.markdown("---")
-    st.subheader("📊 Gesamtbewertung")
+    st.subheader("Gesamtbewertung")
 
     summary = data["summary"]
     first_line = summary.split("\n")[0]
@@ -189,7 +189,7 @@ if "abgleich_data" in st.session_state:
 
     # ---------- Per-category sections -----------------------------------------
     st.markdown("---")
-    st.subheader("🔍 Detailergebnisse nach Kategorie")
+    st.subheader("Detailergebnisse nach Kategorie")
 
     categories = []
     seen: set = set()
@@ -264,13 +264,13 @@ if "abgleich_data" in st.session_state:
 
     with col_dl:
         st.download_button(
-            label="⬇️ Bericht herunterladen (.txt)",
+            label="Bericht herunterladen (.txt)",
             data=buf.getvalue(),
             file_name="abgleich_ergebnis.txt",
             mime="text/plain",
         )
 
     with col_sv:
-        if st.button("💾 Bericht lokal speichern"):
+        if st.button("Bericht lokal speichern"):
             out = save_report(data, Path(__file__).parent / "abgleich_ergebnis.txt")
             st.success(f"Gespeichert: `{out}`")

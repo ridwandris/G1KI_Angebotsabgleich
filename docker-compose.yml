@@ -1,0 +1,10 @@
+services:
+  angebotsabgleich:
+    build: .
+    container_name: angebotsabgleich_app
+    ports:
+      - "8501:8501"
+    # This tells Docker to look for a file named .env and load the variables inside it
+    env_file:
+      - .env
+    restart: unless-stopped

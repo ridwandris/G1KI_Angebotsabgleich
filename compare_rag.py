@@ -253,7 +253,7 @@ def build_vectorstore(docs: list, api_key: str, persist_dir: str | None = None):
         openai_api_base=GWDG_BASE_URL,
     )
     if persist_dir and Path(persist_dir).exists():
-        print(f"  ♻️  Lade gespeicherte ChromaDB aus '{persist_dir}' …")
+        print(f"  Lade gespeicherte ChromaDB aus '{persist_dir}' …")
         return Chroma(persist_directory=persist_dir, embedding_function=embeddings), []
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     chunks = splitter.split_documents(docs)
@@ -276,7 +276,7 @@ def _invoke_with_retry(chain, inputs, max_retries=5):
             msg = str(exc).lower()
             if "429" in msg or "rate" in msg or "resource_exhausted" in msg or "too many" in msg:
                 wait = delay * (2 ** attempt)
-                print(f"\n  ⏳ Rate limit hit – waiting {wait}s (attempt {attempt+1}/{max_retries}) …",
+                print(f"\n  Rate limit hit – waiting {wait}s (attempt {attempt+1}/{max_retries}) …",
                       flush=True)
                 time.sleep(wait)
             else:
@@ -386,7 +386,7 @@ def run_abgleich(api_key=None, model_name=None, sleep_between=0.0, progress_call
     summary = _invoke_with_retry(summary_chain, {"all_results": summary_text})
 
     if progress_callback:
-        progress_callback(1.0, "Abgeschlossen ✅")
+        progress_callback(1.0, "Abgeschlossen")
 
     return {
         "results": results,
