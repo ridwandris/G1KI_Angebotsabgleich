@@ -414,7 +414,7 @@ flowchart TB
    SB --> TZ[Overweighted TEILWEISE without hard evidence]
    FS[Few-shot Calibration] --> DT[Deterministic Assessment Behavior]
    DT --> EP[Explicit Position Numbers and Technical Parameters]
-   NC[Negative Control: Network Tutorial] --> R0[0 Percent Compliance]
+   NC[Negative Control] --> R0[0 Percent Compliance]
    R0 --> F22[22x FEHLT]
    F22 --> ISO[Empirical Evidence: Run Isolation and Hallucination Mitigation]
 ```
@@ -853,7 +853,7 @@ flowchart TB
    SB --> TZ[Übergewicht TEILWEISE ohne harte Evidenz]
    FS[Few-Shot Kalibrierung] --> DT[Deterministische Bewertung]
    DT --> EP[Explizite Positionsnummern und technische Parameter]
-   NC[Negativkontrolle: Netzwerk-Tutorial] --> R0[0 Prozent Konformität]
+   NC[Negativkontrolle] --> R0[0 Prozent Konformität]
    R0 --> F22[22 x FEHLT]
    F22 --> ISO[Empirischer Nachweis: Laufisolation und Halluzinationsminderung]
 ```
