@@ -42,14 +42,15 @@ VERDICT_BORDER = {
     "FEHLT":    "#f44336",
     "UNKLAR":   "#9e9e9e",
 }
+CARD_TEXT_COLOR = "#f5f5f5"
 
 
 def verdict_badge(verdict: str) -> str:
     icon  = VERDICT_ICON.get(verdict, "❓")
-    color = VERDICT_BORDER.get(verdict, "#9e9e9e")
+    border = VERDICT_BORDER.get(verdict, "#9e9e9e")
     return (
-        f"<span style='background:{VERDICT_COLOR.get(verdict,'#222')};color:{color};"
-        f"border:1px solid {color};border-radius:4px;padding:2px 8px;"
+        f"<span style='background:{VERDICT_COLOR.get(verdict,'#222')};color:{border};"
+        f"border:1px solid {border};border-radius:4px;padding:2px 8px;"
         f"font-weight:bold;font-size:0.85em'>{icon} {verdict}</span>"
     )
 
@@ -156,7 +157,7 @@ if "abgleich_data" in st.session_state:
 
     st.markdown(
         f"<div style='background:#1a1a1a;border-left:6px solid {color};"
-        f"padding:16px;border-radius:6px;font-size:1.0em'>{summary}</div>",
+        f"padding:16px;border-radius:6px;font-size:1.0em;color:{CARD_TEXT_COLOR}'>{summary}</div>",
         unsafe_allow_html=True,
     )
 
@@ -223,7 +224,7 @@ if "abgleich_data" in st.session_state:
                 )
                 st.markdown(
                     f"<div style='background:{bg};border-left:4px solid {border};"
-                    f"padding:10px 14px;border-radius:4px;margin-bottom:8px'>"
+                    f"padding:10px 14px;border-radius:4px;margin-bottom:8px;color:{CARD_TEXT_COLOR}'>"
                     f"<b>[{r['id']}] {r['title']}</b><br>"
                     f"{verdict_badge(verdict)}<br><br>"
                     f"<b>Begründung:</b> {r['reasoning']}<br>"
