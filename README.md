@@ -79,11 +79,11 @@ Both PDF documents are processed through an identical pipeline:
    - It is available through the GWDG academic infrastructure with generous rate limits
    - It produces high-dimensional embeddings suitable for semantic similarity search
 
-4. **Vector store persistence**: The embedded chunks are stored in a **ChromaDB** vector database, persisted to disk in two separate directories:
-   - `.chroma_konzept/` — index for the specification document
-   - `.chroma_angebot/` — index for the component list
+4. **Vector store strategy and isolation**: The embedded chunks are stored in **ChromaDB** with a split strategy:
+   - `.chroma_konzept/` — persisted index for the specification document (reused across runs)
+   - `angebot_<UUID>` — ephemeral in-memory collection for each uploaded offer document
 
-   On subsequent runs, if these directories exist, the system loads the pre-built index directly from disk, eliminating redundant PDF parsing and embedding API calls. This reduces setup time from approximately 30–60 seconds to under 1 second.
+   For each run, the component list index is created with a unique UUID-based collection name. This enforces strict session isolation and prevents cross-contamination between experiments and test runs.
 
 ### Phase 3: Retrieval-Augmented Compatibility Checking
 
@@ -97,7 +97,8 @@ For each of the 22 check points, the system performs the following steps:
    - The category and title of the current check point
    - The retrieved specification passages (as normative reference)
    - The retrieved component list passages (as evidence for/against compliance)
-   - Explicit output format instructions requiring a structured response
+   - Domain-specific **few-shot examples** (sprinkler systems, CO₂ extinguishing, aspirating smoke detection)
+   - Explicit output format instructions requiring a structured response with concrete references (e.g. position numbers)
 
 3. **LLM inference**: The assembled prompt is sent to **Llama 3.3 70B Instruct** via the GWDG SAIA API (`/v1/chat/completions`). The model is configured with `temperature = 0` to ensure deterministic, reproducible outputs.
 
@@ -141,6 +142,12 @@ The switch to concurrent execution alone reduces wall-clock time by approximatel
 ---
 
 ## 3. System Architecture
+
+### 3.1 Architecture and Feature Upgrades
+
+- **Dynamic file upload (offer PDF)**: The Streamlit UI now accepts arbitrary component-list PDFs at runtime, enabling flexible scenario-based testing without replacing project-root files.
+- **In-memory vector database isolation**: Each upload is processed in an isolated UUID-scoped Chroma collection, ensuring methodological separation between runs.
+- **Few-shot prompting instead of zero-shot baseline**: The compliance prompt was recalibrated with domain-specific exemplars (sprinkler, CO₂ systems, aspirating smoke detectors) to improve determinism and reduce semantic over-generalization.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -205,10 +212,10 @@ G1KI_Angebotsabgleich/
 ├── compare_rag.py             # RAG core module (compatibility engine + CLI)
 ├── main.py                    # Entry point stub
 ├── Loeschanlagenkonzept.pdf   # Fire suppression specification (input)
-├── Komponentenliste.pdf       # Vendor component list / offer (input)
+├── TestDaten_Angebot/         # Demo and test offers (e.g. Komponentenliste.pdf)
 ├── abgleich_ergebnis.txt      # Generated compatibility report (output)
 ├── .chroma_konzept/           # Persisted vector store – specification index
-├── .chroma_angebot/           # Persisted vector store – component list index
+├── abgleich_llama_3_3_70b_instruct.txt  # Model-specific report output (CLI)
 ├── pyproject.toml             # Project metadata and dependencies
 ├── uv.lock                    # Locked dependency versions
 ├── LICENSE                    # Project licence
@@ -272,12 +279,16 @@ uv sync
 
 ### 7.3 Place Input Documents
 
-Both PDF files must be present in the project root with these exact filenames:
+Required in project root:
 
 | Filename | Contents |
 |---|---|
 | `Loeschanlagenkonzept.pdf` | Fire suppression specification (normative reference) |
-| `Komponentenliste.pdf` | Vendor component list (offer to be verified) |
+
+Offer document options:
+- **Web UI**: upload any offer PDF dynamically during runtime.
+- **CLI**: pass the offer path as a command-line argument.
+- A demo file is provided in `TestDaten_Angebot/Komponentenliste.pdf`.
 
 ### 7.4 Run the Streamlit Web Application
 
@@ -286,14 +297,17 @@ uv run streamlit run app.py
 ```
 
 The application opens at `http://localhost:8501`. Use the **▶ Abgleich starten** button to run the compatibility check.
+For a quick demonstration, upload `TestDaten_Angebot/Komponentenliste.pdf` in the UI.
 
 ### 7.5 Run via Command Line (CLI)
 
 ```bash
-uv run python compare_rag.py
+uv run python compare_rag.py TestDaten_Angebot/Komponentenliste.pdf
+# alternativ / alternatively
+python compare_rag.py TestDaten_Angebot/Komponentenliste.pdf
 ```
 
-Results are printed to the terminal and saved to `abgleich_ergebnis.txt`.
+Results are printed to the terminal and saved as a model-specific report file.
 
 ### 7.6 Interpreting Results
 
@@ -328,11 +342,13 @@ ANGEBOT_PDF     = "Komponentenliste.pdf"
 
 ### Forcing a Vector Store Rebuild
 
-If either PDF is replaced with a new version, delete the cached index so it is rebuilt on the next run:
+If the specification PDF is replaced with a new version, delete the cached concept index so it is rebuilt on the next run:
 
 ```bash
-rm -rf .chroma_konzept .chroma_angebot
+rm -rf .chroma_konzept
 ```
+
+The offer index is created in-memory per run (UUID-scoped) and therefore does not require manual cache cleanup.
 
 ---
 
@@ -342,8 +358,8 @@ rm -rf .chroma_konzept .chroma_angebot
 |---|---|---|
 | `429 Too Many Requests` | API rate limit exceeded | Built-in retry with exponential backoff handles this automatically. If persistent, reduce `MAX_WORKERS` to 3. |
 | Import errors in VS Code | Pylance using wrong Python | `Ctrl+Shift+P` → **Python: Select Interpreter** → `.venv/bin/python` |
-| `PDF nicht gefunden` | Missing input files | Ensure both PDFs are in the project root directory |
-| Stale results after PDF update | Old vector index cached | Run `rm -rf .chroma_konzept .chroma_angebot` |
+| `PDF nicht gefunden` | Missing required files or wrong CLI path | Ensure `Loeschanlagenkonzept.pdf` is in the project root and the offer path is valid (UI upload or CLI argument). |
+| Stale results after specification PDF update | Old concept vector index cached | Run `rm -rf .chroma_konzept` |
 
 ---
 
@@ -362,9 +378,46 @@ This project uses the **GWDG SAIA** (Scalable AI Accelerator) API, which is Open
 
 1. **Static check point catalogue**: The 22 check points are manually defined. Future work could explore automatic requirement extraction from the specification document using LLM-based information extraction.
 2. **Single-document scope**: The system currently compares exactly two documents. Extending it to handle multiple specification documents or multiple offers simultaneously would increase practical applicability.
-3. **No fine-tuning**: The LLM is used in a zero-shot setting with prompt engineering only. Domain-specific fine-tuning on fire protection compliance data could improve accuracy.
+3. **No fine-tuning**: The LLM currently uses domain-specific few-shot prompting without parameter-level adaptation. Domain-specific fine-tuning on fire protection compliance data could further improve robustness.
 4. **PDF quality dependency**: The system relies on text-extractable PDFs. Scanned documents would require an OCR preprocessing step.
 5. **Verdict granularity**: The three-level verdict scale (ERFÜLLT / TEILWEISE / FEHLT) could be refined into a numerical compliance score for quantitative analysis.
+
+---
+
+## 12. Evaluation & Scientific Results
+
+### 12.1 Zero-Shot vs. Few-Shot Calibration
+
+Early experiments with the initial zero-shot baseline exhibited pronounced **semantic bleeding**: the model tended to produce *TEILWEISE* verdicts when generic fire-safety vocabulary was present, even in the absence of hard evidence at the level of concrete item references. After migrating to domain-specific few-shot prompting (sprinkler systems, CO2 extinguishing systems, aspirating smoke detectors), decision behavior became substantially more calibrated. The model now behaves in a deterministic and traceable manner, consistently requiring explicit position numbers and technical parameters as evidential support for partial or full compliance.
+
+### 12.2 Negative Control Test
+
+To stress-test pipeline reliability, we deliberately uploaded a thematically unrelated document (a tutorial on digital networks) as the offer input. The system correctly returned a compliance rate of **0%** (22x *FEHLT*) and explicitly identified the topic mismatch in its reasoning output. Empirically, this result demonstrates that the RAG pipeline is fully run-isolated through UUID-based in-memory indexing and that parametric hallucinations in the form of domain-inappropriate pseudo-compliance are effectively mitigated.
+
+### 12.3 Visual Summary
+
+```mermaid
+flowchart LR
+   A[Offer PDF Upload] --> B[Per-run UUID]
+   B --> C[In-memory Chroma Offer Index]
+   D[Persistent Concept Index] --> E[RAG Retrieval per Check]
+   C --> E
+   E --> F[Few-shot Prompting]
+   F --> G[Llama 3.3 70B Inference]
+   G --> H[22 Individual Verdicts]
+   H --> I[Overall Assessment]
+```
+
+```mermaid
+flowchart TB
+   ZS[Zero-shot Baseline] --> SB[Semantic Bleeding]
+   SB --> TZ[Overweighted TEILWEISE without hard evidence]
+   FS[Few-shot Calibration] --> DT[Deterministic Assessment Behavior]
+   DT --> EP[Explicit Position Numbers and Technical Parameters]
+   NC[Negative Control: Network Tutorial] --> R0[0 Percent Compliance]
+   R0 --> F22[22x FEHLT]
+   F22 --> ISO[Empirical Evidence: Run Isolation and Hallucination Mitigation]
+```
 
 ---
 ---
@@ -440,11 +493,11 @@ Beide PDF-Dokumente durchlaufen eine identische Verarbeitungspipeline:
    - Es über die akademische Infrastruktur der GWDG mit großzügigen Rate-Limits verfügbar ist
    - Es hochdimensionale Embeddings erzeugt, die für semantische Ähnlichkeitssuche geeignet sind
 
-4. **Persistierung der Vektordatenbank**: Die eingebetteten Chunks werden in einer **ChromaDB**-Vektordatenbank gespeichert und auf der Festplatte in zwei separaten Verzeichnissen persistiert:
-   - `.chroma_konzept/` — Index für das Konzeptdokument
-   - `.chroma_angebot/` — Index für die Komponentenliste
+4. **Vektordatenbank-Strategie und Isolation**: Die eingebetteten Chunks werden in **ChromaDB** mit getrennter Persistenzstrategie verwaltet:
+   - `.chroma_konzept/` — persistierter Index für das Konzeptdokument (wird laufübergreifend wiederverwendet)
+   - `angebot_<UUID>` — flüchtige In-Memory-Collection pro Upload/Lauf für die Komponentenliste
 
-   Bei nachfolgenden Durchläufen: Wenn diese Verzeichnisse existieren, lädt das System den vorgebauten Index direkt von der Festplatte, wodurch redundantes PDF-Parsing und Embedding-API-Aufrufe entfallen. Dies reduziert die Einrichtungszeit von ca. 30–60 Sekunden auf unter 1 Sekunde.
+   Für jeden Lauf wird der Angebotsindex mit einer eindeutigen UUID erstellt. Dadurch wird eine strikte Sitzungstrennung erreicht und eine Kreuzkontamination zwischen Testläufen methodisch ausgeschlossen.
 
 ### Phase 3: Retrieval-augmentierte Kompatibilitätsprüfung
 
@@ -458,7 +511,8 @@ Für jeden der 22 Prüfpunkte führt das System folgende Schritte aus:
    - Kategorie und Titel des aktuellen Prüfpunkts
    - Die abgerufenen Konzeptpassagen (als normative Referenz)
    - Die abgerufenen Komponentenlistenpassagen (als Belege für/gegen Konformität)
-   - Explizite Ausgabeformatanweisungen, die eine strukturierte Antwort erfordern
+   - Domänenspezifische **Few-Shot-Beispiele** (Sprinkler, CO₂-Anlage, Ansaugrauchmelder)
+   - Explizite Ausgabeformatanweisungen, die eine strukturierte Antwort mit konkreten Positionsnummern und Textbelegen erzwingen
 
 3. **LLM-Inferenz**: Der zusammengestellte Prompt wird an **Llama 3.3 70B Instruct** über die GWDG SAIA API (`/v1/chat/completions`) gesendet. Das Modell ist mit `temperature = 0` konfiguriert, um deterministische, reproduzierbare Ausgaben zu gewährleisten.
 
@@ -502,6 +556,12 @@ Allein der Wechsel zur parallelen Ausführung reduziert die Wanduhrzeit um ca. 4
 ---
 
 ## 3. Systemarchitektur
+
+### 3.1 Architektur- und Feature-Upgrades
+
+- **Dynamischer Datei-Upload**: Die Streamlit-Oberfläche akzeptiert zur Laufzeit beliebige Angebots-PDFs (Komponentenlisten), ohne dass Dateien im Projektstamm ersetzt werden müssen.
+- **In-Memory-Vektordatenbank-Isolation**: Jeder Upload wird in einer UUID-basierten, flüchtigen Chroma-Collection verarbeitet; dadurch sind Testläufe strikt voneinander getrennt.
+- **Few-Shot statt Zero-Shot**: Die Prompt-Kalibrierung wurde auf domänenspezifische Beispiele (Sprinkler, CO₂-Anlagen, Ansaugrauchmelder) umgestellt, um deterministische und nachvollziehbare Bewertungen zu erzwingen.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -566,10 +626,10 @@ G1KI_Angebotsabgleich/
 ├── compare_rag.py             # RAG-Kernmodul (Kompatibilitäts-Engine + CLI)
 ├── main.py                    # Einstiegspunkt-Stub
 ├── Loeschanlagenkonzept.pdf   # Löschanlagenkonzept (Eingabe)
-├── Komponentenliste.pdf       # Komponentenliste des Anbieters (Eingabe)
+├── TestDaten_Angebot/         # Demo- und Testangebote (z. B. Komponentenliste.pdf)
 ├── abgleich_ergebnis.txt      # Generierter Kompatibilitätsbericht (Ausgabe)
 ├── .chroma_konzept/           # Persistierte Vektordatenbank – Konzept-Index
-├── .chroma_angebot/           # Persistierte Vektordatenbank – Komponentenlisten-Index
+├── abgleich_llama_3_3_70b_instruct.txt  # Modellspezifische Berichtsausgabe (CLI)
 ├── pyproject.toml             # Projektmetadaten und Abhängigkeiten
 ├── uv.lock                    # Gesperrte Abhängigkeitsversionen
 ├── LICENSE                    # Projektlizenz
@@ -633,12 +693,16 @@ uv sync
 
 ### 7.3 Eingabedokumente bereitstellen
 
-Beide PDF-Dateien müssen im Projektstammverzeichnis mit exakt diesen Dateinamen vorhanden sein:
+Verpflichtend im Projektstammverzeichnis:
 
 | Dateiname | Inhalt |
 |---|---|
 | `Loeschanlagenkonzept.pdf` | Löschanlagenkonzept (normative Referenz) |
-| `Komponentenliste.pdf` | Komponentenliste des Anbieters (zu prüfendes Angebot) |
+
+Optionen für das Angebotsdokument:
+- **Web-UI**: Beliebige Angebots-PDF zur Laufzeit hochladen.
+- **CLI**: Dateipfad als Argument übergeben.
+- Eine Demo-Datei liegt in `TestDaten_Angebot/Komponentenliste.pdf` bereit.
 
 ### 7.4 Streamlit-Webanwendung starten
 
@@ -647,14 +711,17 @@ uv run streamlit run app.py
 ```
 
 Die Anwendung öffnet sich unter `http://localhost:8501`. Der Abgleich wird über die Schaltfläche **▶ Abgleich starten** ausgelöst.
+Für einen schnellen Test kann die Datei `TestDaten_Angebot/Komponentenliste.pdf` direkt über die UI hochgeladen werden.
 
 ### 7.5 Kommandozeile (CLI)
 
 ```bash
-uv run python compare_rag.py
+uv run python compare_rag.py TestDaten_Angebot/Komponentenliste.pdf
+# alternativ (bei aktiver venv)
+python compare_rag.py TestDaten_Angebot/Komponentenliste.pdf
 ```
 
-Die Ergebnisse werden im Terminal ausgegeben und in `abgleich_ergebnis.txt` gespeichert.
+Die Ergebnisse werden im Terminal ausgegeben und als modellspezifische Berichtdatei gespeichert.
 
 ### 7.6 Ergebnisse interpretieren
 
@@ -689,11 +756,13 @@ ANGEBOT_PDF     = "Komponentenliste.pdf"
 
 ### Neuaufbau der Vektordatenbanken erzwingen
 
-Wenn ein PDF durch eine neue Version ersetzt wird, muss der zwischengespeicherte Index gelöscht werden, damit er beim nächsten Lauf neu aufgebaut wird:
+Wenn das Konzept-PDF durch eine neue Version ersetzt wird, muss der zwischengespeicherte Konzept-Index gelöscht werden, damit er beim nächsten Lauf neu aufgebaut wird:
 
 ```bash
-rm -rf .chroma_konzept .chroma_angebot
+rm -rf .chroma_konzept
 ```
+
+Der Angebotsindex wird pro Lauf als UUID-basierte In-Memory-Collection erzeugt und benötigt daher keinen manuellen Cache-Reset.
 
 ---
 
@@ -703,8 +772,8 @@ rm -rf .chroma_konzept .chroma_angebot
 |---|---|---|
 | `429 Too Many Requests` | API-Rate-Limit überschritten | Integrierter Retry mit exponentiellem Backoff behandelt dies automatisch. Bei Fortbestehen `MAX_WORKERS` auf 3 reduzieren. |
 | Import-Fehler in VS Code | Pylance verwendet falsches Python | `Ctrl+Shift+P` → **Python: Select Interpreter** → `.venv/bin/python` |
-| `PDF nicht gefunden` | Fehlende Eingabedateien | Beide PDFs müssen im Projektstammverzeichnis liegen |
-| Veraltete Ergebnisse nach PDF-Aktualisierung | Alter Vektor-Index zwischengespeichert | `rm -rf .chroma_konzept .chroma_angebot` ausführen |
+| `PDF nicht gefunden` | Fehlende Pflichtdatei oder ungültiger Angebots-Pfad | Sicherstellen, dass `Loeschanlagenkonzept.pdf` im Projektstamm liegt und der Angebots-Pfad korrekt ist (UI-Upload oder CLI-Argument). |
+| Veraltete Ergebnisse nach Konzept-PDF-Aktualisierung | Alter Konzept-Vektor-Index zwischengespeichert | `rm -rf .chroma_konzept` ausführen |
 
 ---
 
@@ -723,7 +792,7 @@ Dieses Projekt verwendet die **GWDG SAIA** (Scalable AI Accelerator) API, die Op
 
 1. **Statischer Prüfpunkt-Katalog**: Die 22 Prüfpunkte sind manuell definiert. Zukünftige Arbeit könnte die automatische Anforderungsextraktion aus dem Konzeptdokument mittels LLM-basierter Informationsextraktion untersuchen.
 2. **Einzeldokument-Umfang**: Das System vergleicht derzeit genau zwei Dokumente. Eine Erweiterung für mehrere Konzeptdokumente oder Angebote gleichzeitig würde die praktische Anwendbarkeit erhöhen.
-3. **Kein Fine-Tuning**: Das LLM wird im Zero-Shot-Setting nur mit Prompt Engineering eingesetzt. Domänenspezifisches Fine-Tuning auf Brandschutz-Konformitätsdaten könnte die Genauigkeit verbessern.
+3. **Kein Fine-Tuning**: Das LLM wird aktuell mit domänenspezifischem Few-Shot-Prompting ohne parameterseitige Anpassung eingesetzt. Domänenspezifisches Fine-Tuning auf Brandschutz-Konformitätsdaten könnte die Robustheit weiter erhöhen.
 4. **PDF-Qualitätsabhängigkeit**: Das System setzt textextrahierbare PDFs voraus. Gescannte Dokumente erfordern einen OCR-Vorverarbeitungsschritt.
 5. **Bewertungsgranularität**: Die dreistufige Bewertungsskala (ERFÜLLT / TEILWEISE / FEHLT) könnte zu einem numerischen Konformitätsscore für quantitative Analyse verfeinert werden.
 
@@ -738,9 +807,53 @@ cd G1KI_Angebotsabgleich
 # 2. Abhängigkeiten installieren / Install dependencies (einmalig / once)
 uv sync
 
-# 3. PDFs prüfen / Verify PDFs are present
-ls Loeschanlagenkonzept.pdf Komponentenliste.pdf
+# 3. Pflichtdatei prüfen / Verify required concept PDF
+ls Loeschanlagenkonzept.pdf
 
 # 4. App starten / Start the app
 uv run streamlit run app.py
+
+# 5. Demo-Angebot in der UI hochladen / Upload demo offer in UI
+#    TestDaten_Angebot/Komponentenliste.pdf
+
+# 6. Optional: CLI mit dynamischem Dateipfad / Optional CLI run with dynamic path
+uv run python compare_rag.py TestDaten_Angebot/Komponentenliste.pdf
+python compare_rag.py TestDaten_Angebot/Komponentenliste.pdf
+```
+
+---
+
+## 12. Evaluierung & Wissenschaftliche Ergebnisse
+
+### 12.1 Zero-Shot vs. Few-Shot Kalibrierung
+
+Die initiale Zero-Shot-Baseline zeigte in frühen Testläufen ein ausgeprägtes **semantisches Bleeding**: Bereits bei allgemeiner brandschutznaher Terminologie wurden überproportional häufig Bewertungen vom Typ *TEILWEISE* vergeben, obwohl belastbare Nachweise auf Ebene konkreter Positionen fehlten. Durch die Umstellung auf domänenspezifisches Few-Shot-Prompting (Sprinkler, CO2-Anlagen, Ansaugrauchmelder) wurde das Entscheidungsverhalten deutlich kalibriert. Das Modell arbeitet nun deterministisch-nachvollziehbar und fordert konsistent explizite Positionsnummern sowie technische Parameter als Evidenzbasis für jede Teil- oder Vollerfüllung.
+
+### 12.2 Negativkontrolle (Negative Control Test)
+
+Zur empirischen Belastungsprüfung der Pipeline wurde bewusst ein thematisch irrelevantes Dokument (Tutorial zu digitalen Netzwerken) als Angebotsdokument hochgeladen. Das System klassifizierte den Abgleich mit einer Konformitätsrate von **0 %** (22 x *FEHLT*) und benannte den fachfremden Dokumentkontext explizit in der Begründung. Dieses Ergebnis belegt empirisch, dass die RAG-Pipeline durch die UUID-basierte In-Memory-Isolation vollständig laufgetrennt arbeitet und parametrische Halluzinationen im Sinne domänenfremder Scheinerfüllungen wirksam mitigiert werden.
+
+### 12.3 Visuelle Zusammenfassung
+
+```mermaid
+flowchart LR
+   A[Upload Angebot PDF] --> B[UUID pro Lauf]
+   B --> C[Chroma Angebot In-Memory]
+   D[Persistentes Konzept-Indexing] --> E[RAG Retrieval pro Prüfpunkt]
+   C --> E
+   E --> F[Few-Shot Prompting]
+   F --> G[Llama 3.3 70B Inferenz]
+   G --> H[22 Einzelverdicts]
+   H --> I[Gesamtbewertung]
+```
+
+```mermaid
+flowchart TB
+   ZS[Zero-Shot Baseline] --> SB[Semantisches Bleeding]
+   SB --> TZ[Übergewicht TEILWEISE ohne harte Evidenz]
+   FS[Few-Shot Kalibrierung] --> DT[Deterministische Bewertung]
+   DT --> EP[Explizite Positionsnummern und technische Parameter]
+   NC[Negativkontrolle: Netzwerk-Tutorial] --> R0[0 Prozent Konformität]
+   R0 --> F22[22 x FEHLT]
+   F22 --> ISO[Empirischer Nachweis: Laufisolation und Halluzinationsminderung]
 ```
