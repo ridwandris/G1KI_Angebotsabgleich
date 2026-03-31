@@ -2,7 +2,9 @@
 
 **LLM-gestützte Kompatibilitätsprüfung mittels Retrieval-Augmented Generation (RAG)**
 
-*Leuphana Universität Lüneburg – Modul G1KI*
+- *Leuphana Universität Lüneburg*
+- *Modul: KI-unterstützte Produktentwicklung*
+- *Dozent: Prof. Dr.-Ing. Arthur Seibel*
 
 ---
 
