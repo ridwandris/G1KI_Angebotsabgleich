@@ -262,10 +262,13 @@ G1KI_Angebotsabgleich/
 
 - **Python 3.11+**
 - **uv** package manager
+- **Docker** + **Docker Compose** (optional container runtime)
 
 ```bash
 python3 --version   # must be ≥ 3.11
 uv --version        # install via: curl -Ls https://astral.sh/uv/install.sh | sh
+docker --version
+docker compose version
 ```
 
 ### 7.2 Setup
@@ -311,7 +314,35 @@ python compare_rag.py TestDaten_Angebot/Komponentenliste.pdf
 
 Results are printed to the terminal and saved as a model-specific report file.
 
-### 7.6 Interpreting Results
+### 7.6 Run with Docker (Alternative)
+
+The repository already contains a production-ready `Dockerfile` and `docker-compose.yml`.
+
+1. Create a `.env` file in the project root (required by `docker-compose.yml`):
+
+```bash
+cat > .env << 'EOF'
+GWDG_API_KEY=your_api_key_here
+EOF
+```
+
+2. Build and start the container:
+
+```bash
+docker compose up --build
+```
+
+3. Open the app:
+
+- `http://localhost:8501`
+
+4. Stop the service:
+
+```bash
+docker compose down
+```
+
+### 7.7 Interpreting Results
 
 Each check point receives one of three verdicts:
 
@@ -676,10 +707,13 @@ G1KI_Angebotsabgleich/
 
 - **Python 3.11+**
 - **uv** Paketmanager
+- **Docker** + **Docker Compose** (optionale Container-Laufzeit)
 
 ```bash
 python3 --version   # muss ≥ 3.11 sein
 uv --version        # Installation: curl -Ls https://astral.sh/uv/install.sh | sh
+docker --version
+docker compose version
 ```
 
 ### 7.2 Einrichtung
@@ -725,7 +759,35 @@ python compare_rag.py TestDaten_Angebot/Komponentenliste.pdf
 
 Die Ergebnisse werden im Terminal ausgegeben und als modellspezifische Berichtdatei gespeichert.
 
-### 7.6 Ergebnisse interpretieren
+### 7.6 Mit Docker ausführen (Alternative)
+
+Das Repository enthält bereits ein lauffähiges `Dockerfile` sowie eine `docker-compose.yml`.
+
+1. Eine `.env`-Datei im Projektstamm anlegen (wird von `docker-compose.yml` geladen):
+
+```bash
+cat > .env << 'EOF'
+GWDG_API_KEY=your_api_key_here
+EOF
+```
+
+2. Container bauen und starten:
+
+```bash
+docker compose up --build
+```
+
+3. Anwendung öffnen:
+
+- `http://localhost:8501`
+
+4. Service stoppen:
+
+```bash
+docker compose down
+```
+
+### 7.7 Ergebnisse interpretieren
 
 Jeder Prüfpunkt erhält eine von drei Bewertungen:
 
