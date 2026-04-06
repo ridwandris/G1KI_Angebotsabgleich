@@ -1,0 +1,181 @@
+================================================================================
+ANGEBOTSABGLEICH – KOMPATIBILITÄTSPRÜFUNG
+Konzept:   Loeschanlagenkonzept.pdf
+Angebot:   Komponentenliste.pdf
+Modell:    llama-3.3-70b-instruct
+Erstellt:  2026-04-06 19:58:03
+Laufzeit:  33.6 s
+================================================================================
+
+ZUSAMMENFASSUNG
+--------------------------------------------------------------------------------
+NICHT VOLLSTÄNDIG UMSETZBAR
+
+Das Löschanlagenkonzept kann mit der vorliegenden Komponentenliste nicht vollständig umgesetzt werden. Es gibt mehrere kritische Lücken, insbesondere bei den CO2-Löschanlagen, dem CO2-Vorratsbehälter, dem CO2-Düsennetz, den Druckentlastungsklappen, den Ansaugrauchmeldern, den UV-Flammenmeldern, der 2-Melder-/2-Linien-Abhängigkeit, der manuellen Handauslösung, der Löschsteuerzentrale, den Betriebsmittelabschaltungen, der Löschwasserversorgung und der Hydrantenanlage.
+
+Die nächste empfohlene Schritte sind:
+- Überprüfung und Ergänzung der Komponentenliste, um alle Anforderungen des Löschanlagenkonzepts zu erfüllen.
+- Klärung der VdS-Zulassung aller Anlagenteile, Errichteranerkennung und Prüfnachweise.
+- Durchführung einer bauaufsichtlich anerkannten Sachverständigenabnahme vor der Inbetriebnahme der Anlage.
+- Überarbeitung des Löschanlagenkonzepts, um sicherzustellen, dass alle erforderlichen Komponenten und Funktionen berücksichtigt werden.
+
+Statistik: ERFÜLLT=1  TEILWEISE=5  FEHLT=16  UNKLAR=0
+================================================================================
+
+DETAILERGEBNISSE
+================================================================================
+
+[SPR-1]  Deckenschutz Compartment 1 (7,5 mm/min, RTI 50–80, 68 °C)
+Kategorie:   Sprinkleranlage – Compartment 1
+VERDICT:     ERFÜLLT  (4.42 s)
+Begründung:  Die Komponentenliste enthält unter Pos. 1.1.1 einen Sprinkler mit der korrekten Auslegungsrate von 7,5 mm/min für den Deckenschutz im Compartment 1. Dies entspricht den Anforderungen des Löschanlagenkonzepts. Darüber hinaus sind weitere Komponenten wie Sprinkler für die Vorzone (Pos. 1.1.2) und die RWA (Pos. 1.1.3) enthalten, die den umfassenden Schutz des Compartment 1 unterstützen.
+Lücken:      keine
+--------------------------------------------------------------------------------
+
+[SPR-2]  Regalschutz Compartment 1 (10,0 mm/min, RTI ≤ 50, 68 °C, 7 Ebenen)
+Kategorie:   Sprinkleranlage – Compartment 1
+VERDICT:     TEILWEISE  (4.26 s)
+Begründung:  Die Komponentenliste enthält unter Pos. 1.1.4 einen Sprinkler mit 10mm/min für die Ein- und Auslagerungsbahn, was der geforderten Auslegungsrate entspricht. Allerdings fehlt die explizite Erwähnung von RTI ≤ 50 und 68 °C in der Komponentenliste.
+Lücken:      Es fehlt die Angabe zur RTI (Response Time Index) und der Temperatur (68 °C) für die Sprinkleranlage im Compartment 1.
+--------------------------------------------------------------------------------
+
+[SPR-3]  Vorzonenschutz Achse I-J'/27-33 (10,0 mm/min, Einzelstrang)
+Kategorie:   Sprinkleranlage – Compartment 1
+VERDICT:     TEILWEISE  (4.87 s)
+Begründung:  Die Komponentenliste enthält unter Pos. 1.1.4 einen Sprinkler mit 10mm/min für die Ein- und Auslagerungsbahn, was der geforderten Auslegungsrate für den Vorzonenschutz Achse I-J'/27-33 entspricht. Allerdings fehlt eine explizite Zuordnung zu diesem spezifischen Bereich, was die Erfüllung der Anforderung unsicher macht.
+Lücken:      Es fehlt eine klare Zuordnung des Sprinklers mit 10mm/min zur Vorzone Achse I-J'/27-33, um die Anforderung vollständig zu erfüllen.
+--------------------------------------------------------------------------------
+
+[SPR-4]  Sprinklerschutz Büro-, Sozial- und Technikbereich
+Kategorie:   Sprinkleranlage – Nebenräume
+VERDICT:     TEILWEISE  (6.5 s)
+Begründung:  Die Komponentenliste enthält unter Pos. 1.3.1 einen Sprinkler mit 5,0 mm/min für den Büro-, Sozial- und Technikbereich, was nicht den Anforderungen des Löschanlagenkonzepts entspricht, das eine Auslegung für den Sprinklerschutz in diesen Bereichen fordert. Es fehlt eine klare Angabe, ob die angebotenen Sprinkler die Anforderungen an die Düsenanordnung und die Flutungszeit erfüllen.
+Lücken:      Es fehlt eine klare Angabe zur Auslegung der Sprinkleranlage für den Büro-, Sozial- und Technikbereich, insbesondere hinsichtlich der Düsenanordnung und der Flutungszeit. Die angebotenen Sprinkler entsprechen nicht den Anforderungen des Löschanlagenkonzepts.
+--------------------------------------------------------------------------------
+
+[SPR-5]  Überwachungseinrichtungen (Schieberüberwachung, Druckschalter, Alarmgebung)
+Kategorie:   Sprinkleranlage – Überwachung
+VERDICT:     TEILWEISE  (4.52 s)
+Begründung:  Die Komponentenliste enthält unter Pos. 1.4.1 eine Schieberüberwachung und unter Pos. 1.4.3 einen Temperatur-Überwachungsschalter, was teilweise den Anforderungen an Überwachungseinrichtungen entspricht. Allerdings fehlt eine explizite Erwähnung von Druckschaltern.
+Lücken:      Es fehlt eine explizite Erwähnung von Druckschaltern in der Komponentenliste, um die Anforderung vollständig zu erfüllen.
+--------------------------------------------------------------------------------
+
+[CO2-1]  CO2-Löschanlage LB 1 – Compartment 2 (3.070 kg, 3 Tiefdüsenebenen)
+Kategorie:   CO2-Niederdruck-Löschanlage
+VERDICT:     FEHLT  (6.07 s)
+Begründung:  Die Komponentenliste enthält keine explizite Erwähnung einer CO2-Niederdruck-Löschanlage für den Löschbereich LB 1 – Compartment 2 mit den spezifizierten 3.070 kg und 3 Tiefdüsenebenen. Es gibt zwar Positionen wie 2.2.1, die ein Aufsatzrohr für den Löschbereich 1, Compartment 2, erwähnen, aber keine umfassende Löschanlage, die die Anforderungen des Löschanlagenkonzepts erfüllt.
+Lücken:      Eine vollständige CO2-Niederdruck-Löschanlage für den Löschbereich LB 1 – Compartment 2 mit den spezifizierten 3.070 kg und 3 Tiefdüsenebenen fehlt.
+--------------------------------------------------------------------------------
+
+[CO2-2]  CO2-Löschanlage LB 2 – Compartment 3 (18.515 kg, 3 Tiefdüsenebenen)
+Kategorie:   CO2-Niederdruck-Löschanlage
+VERDICT:     FEHLT  (5.52 s)
+Begründung:  Die Komponentenliste enthält keine explizite Erwähnung einer CO2-Niederdruck-Löschanlage für Compartment 3, die im Löschanlagenkonzept gefordert wird. Es gibt zwar Positionen wie 2.2.1-2.2.12, die CO2-Rohrleitungen und -Komponenten betreffen, aber keine direkte Zuordnung zu Compartment 3 oder der spezifischen Anforderung von 18.515 kg CO2.
+Lücken:      Es fehlt eine explizite Erwähnung der CO2-Niederdruck-Löschanlage für Compartment 3, einschließlich der erforderlichen Menge von 18.515 kg CO2 und der entsprechenden Ausführungsdetails.
+--------------------------------------------------------------------------------
+
+[CO2-3]  CO2-Löschanlage LB 3 – Kommissionierfläche (14.024 kg, 2 Tiefdüsenebenen)
+Kategorie:   CO2-Niederdruck-Löschanlage
+VERDICT:     FEHLT  (7.34 s)
+Begründung:  Die Komponentenliste enthält keine explizite Erwähnung einer CO2-Niederdruck-Löschanlage für die Kommissionierfläche (LB 3) mit den spezifizierten Anforderungen wie 14.024 kg und 2 Tiefdüsenebenen. Die Liste umfasst zwar einige Komponenten, die mit Gaslöschanlagen und CO2-Rohrleitungen zu tun haben, wie z.B. Pos. 2.2.1-2.2.12, aber es fehlt eine klare Zuordnung zu den Anforderungen des Löschanlagenkonzepts für die Kommissionierfläche.
+Lücken:      Es fehlt eine explizite CO2-Niederdruck-Löschanlage für die Kommissionierfläche (LB 3) mit den spezifizierten Anforderungen, einschließlich der erforderlichen Menge an CO2 (14.024 kg) und der Ausführung mit 2 Tiefdüsenebenen.
+--------------------------------------------------------------------------------
+
+[CO2-4]  CO2-Vorratsbehälter (mind. 30.000 kg Nutzinhalt)
+Kategorie:   CO2-Niederdruck-Löschanlage
+VERDICT:     FEHLT  (4.19 s)
+Begründung:  Die Komponentenliste enthält keine Position, die explizit einen CO2-Vorratsbehälter mit einem Mindestinhalt von 30.000 kg Nutzinhalt aufführt. Die Liste umfasst verschiedene Komponenten für eine CO2-Löschanlage, wie z.B. Düsenleitungen und Gaslöschdüsen, aber nicht den Vorratsbehälter selbst.
+Lücken:      CO2-Vorratsbehälter mit Mindestinhalt von 30.000 kg Nutzinhalt fehlt komplett.
+--------------------------------------------------------------------------------
+
+[CO2-5]  CO2-Düsennetz (Gaslöschdüsen, Düsenleitungen DN 25–80)
+Kategorie:   CO2-Niederdruck-Löschanlage
+VERDICT:     FEHLT  (5.71 s)
+Begründung:  Die Komponentenliste enthält keine expliziten Angaben zu einem CO2-Düsennetz mit Gaslöschdüsen und Düsenleitungen DN 25–80, wie im Löschanlagenkonzept gefordert. Die Liste umfasst hauptsächlich Komponenten für eine Sprinkleranlage und eine CO2-Zentrale, aber nicht die spezifischen Düsen und Leitungen für das CO2-Düsennetz.
+Lücken:      CO2-Düsennetz mit Gaslöschdüsen und Düsenleitungen DN 25–80 fehlt komplett, sowie Angaben zur Anordnung der Düsen in ca. 1/3 der Raumhöhe und zur dosierten Entlüftung des Löschbereichs.
+--------------------------------------------------------------------------------
+
+[CO2-6]  Druckentlastungsklappen (pneumatisch, Trox FK-DV o. ä., 200 Pa)
+Kategorie:   CO2-Niederdruck-Löschanlage
+VERDICT:     FEHLT  (3.9 s)
+Begründung:  Die Komponentenliste enthält keine Druckentlastungsklappen (pneumatisch, Trox FK-DV o. ä., 200 Pa) für die CO2-Niederdruck-Löschanlage. Es werden verschiedene Rohrabschottungen, Fittings und Ventile aufgeführt, aber keine expliziten Druckentlastungsklappen.
+Lücken:      Druckentlastungsklappen (pneumatisch, Trox FK-DV o. ä., 200 Pa) fehlen komplett.
+--------------------------------------------------------------------------------
+
+[DET-1]  Ansaugrauchmelder (VdS-konform, Ansaugnetze)
+Kategorie:   Branderkennung & Alarmierung
+VERDICT:     FEHLT  (4.62 s)
+Begründung:  Die Komponentenliste enthält keine Ansaugrauchmelder (VdS-konform, Ansaugnetze), die im Löschanlagenkonzept gefordert werden. Es werden lediglich verschiedene Überwachungseinrichtungen wie Alarmhahnüberwachung (Pos. 1.4.2) und Temperatur-Überwachungsschalter (Pos. 1.4.3) angeboten, aber keine Ansaugrauchmelder.
+Lücken:      Ansaugrauchmelder (VdS-konform, Ansaugnetze) fehlen komplett.
+--------------------------------------------------------------------------------
+
+[DET-2]  UV-Flammenmelder
+Kategorie:   Branderkennung & Alarmierung
+VERDICT:     FEHLT  (4.75 s)
+Begründung:  Die Komponentenliste enthält keine UV-Flammenmelder, obwohl das Löschanlagenkonzept eine Branderkennungs- und Steuereinrichtung fordert, die auch UV-Flammenmelder umfassen kann. Es werden lediglich andere Überwachungseinrichtungen wie Temperatur-Überwachungsschalter (Pos. 1.4.3) und Schieberüberwachung (Pos. 1.4.1) angeboten.
+Lücken:      UV-Flammenmelder fehlen komplett, um die Anforderung der Branderkennung und Alarmierung zu erfüllen.
+--------------------------------------------------------------------------------
+
+[DET-3]  2-Melder-/2-Linien-Abhängigkeit und manuelle Handauslösung (DKM)
+Kategorie:   Branderkennung & Alarmierung
+VERDICT:     FEHLT  (4.74 s)
+Begründung:  Die Komponentenliste enthält keine expliziten Hinweise auf eine 2-Melder-/2-Linien-Abhängigkeit und manuelle Handauslösung (DKM) für die Branderkennung und Alarmierung. Es fehlen spezifische Positionen, die diese Anforderung erfüllen.
+Lücken:      Es fehlt eine klare Implementierung der 2-Melder-/2-Linien-Abhängigkeit und der manuellen Handauslösung (DKM) in der Komponentenliste, um die Anforderungen des Löschanlagenkonzepts zu erfüllen.
+--------------------------------------------------------------------------------
+
+[ALM-1]  Akustische und optische Alarmierung (Blitzleuchten, Hupen, Sirenen)
+Kategorie:   Alarmierungssysteme
+VERDICT:     TEILWEISE  (6.25 s)
+Begründung:  Die Komponentenliste enthält unter Pos. 1.4.5 eine Blitzleuchte 24V und unter Pos. 1.4.6 eine Signalhupe 24V, sowie weitere Sirenen unter Pos. 3.2.26, 3.2.27 und 3.2.28, was teilweise die Anforderung an akustische und optische Alarmierung erfüllt. Allerdings ist unklar, ob die angebotenen Komponenten den spezifischen Anforderungen des Löschanlagenkonzepts entsprechen.
+Lücken:      Es fehlt eine klare Zuordnung der angebotenen Alarmierungskomponenten zu den spezifischen Anforderungen des Löschanlagenkonzepts, insbesondere hinsichtlich der Ansteuerung durch die Löschanlage und der erforderlichen Druckerhöhung.
+--------------------------------------------------------------------------------
+
+[ALM-2]  Warntransparente / Leuchttableaus an Zugängen der Löschbereiche
+Kategorie:   Alarmierungssysteme
+VERDICT:     FEHLT  (4.43 s)
+Begründung:  Die Komponentenliste enthält keine Warntransparente oder Leuchttableaus an Zugängen der Löschbereiche, obwohl das Löschanlagenkonzept diese explizit fordert. Es werden lediglich verschiedene Arten von Sirenen und Signalhupen gelistet, wie z.B. in Pos. 3.2.26, 3.2.27 und 3.2.28, aber keine Warntransparente oder Leuchttableaus.
+Lücken:      Warntransparente oder Leuchttableaus an Zugängen der Löschbereiche fehlen komplett.
+--------------------------------------------------------------------------------
+
+[ALM-3]  Alarmweiterleitung zur BMZ und ständig besetzter Stelle
+Kategorie:   Alarmierungssysteme
+VERDICT:     FEHLT  (5.89 s)
+Begründung:  Die Komponentenliste enthält keine explizite Erwähnung einer Alarmweiterleitung zur BMZ (übergeordneten Brandmeldezentrale) und ständig besetzten Stelle. Es gibt zwar Positionsnummern wie 1.4.2 (Alarmhahnüberwachung) und 1.4.4 (ZX Multi-Ein-/Ausgangsmodul MIO800), aber keine direkte Verbindung zur Alarmweiterleitung.
+Lücken:      Es fehlt eine explizite Komponente oder Funktion für die Alarmweiterleitung zur BMZ und ständig besetzten Stelle, wie z.B. eine Schnittstelle für die Übertragung von Alarmmeldungen an die BMZ oder eine direkte Verbindung zu einer ständig besetzten Stelle.
+--------------------------------------------------------------------------------
+
+[CTR-1]  Löschsteuerzentrale inkl. 30-Stunden-Akku-Backup
+Kategorie:   Löschsteuerzentrale & Energieversorgung
+VERDICT:     FEHLT  (3.62 s)
+Begründung:  Die Komponentenliste enthält keine explizite Erwähnung einer Löschsteuerzentrale mit 30-Stunden-Akku-Backup. Die genannten Positionen beziehen sich auf verschiedene Komponenten wie Sprinkler, Überwachungseinrichtungen und Sirenen, aber nicht auf eine Löschsteuerzentrale.
+Lücken:      Löschsteuerzentrale mit 30-Stunden-Akku-Backup fehlt komplett.
+--------------------------------------------------------------------------------
+
+[CTR-2]  Betriebsmittelabschaltungen (Lüftung, Brandschutzklappen, Tore/Türen)
+Kategorie:   Betriebsmittelansteuerungen
+VERDICT:     FEHLT  (5.16 s)
+Begründung:  Die Komponentenliste enthält keine expliziten Angaben zu Betriebsmittelabschaltungen wie Lüftung, Brandschutzklappen oder Tore/Türen, die im Löschanlagenkonzept gefordert werden. Insbesondere fehlen Positionsnummern, die auf eine automatische Schließung von Türen und Toren bei Auslösung der Löschanlage hinweisen.
+Lücken:      Es fehlen Komponenten oder Positionsnummern, die die Betriebsmittelabschaltungen für Lüftung, Brandschutzklappen und Tore/Türen abdecken, um die im Löschanlagenkonzept geforderte Funktion zu gewährleisten.
+--------------------------------------------------------------------------------
+
+[WTR-1]  Löschwasserversorgung Sprinkler (Pumpenzentrale / Bestandsanlage 600 m³)
+Kategorie:   Wasserversorgung & Hydranten
+VERDICT:     FEHLT  (3.97 s)
+Begründung:  Die Komponentenliste enthält keine expliziten Angaben zu einer Pumpenanlage oder einem Vorratsbehälter für die Löschwasserversorgung, wie im Löschanlagenkonzept gefordert. Insbesondere fehlen Angaben zu den Diesel-Sprinklerpumpenaggregaten und dem Vorratsbehälter mit einer Kapazität von 600 m³.
+Lücken:      Pumpenanlage, Vorratsbehälter mit 600 m³ Kapazität, Diesel-Sprinklerpumpenaggregate
+--------------------------------------------------------------------------------
+
+[WTR-2]  Hydrantenanlage (Innen- und Außenhydranten, 1.600 l/min, 60 min)
+Kategorie:   Wasserversorgung & Hydranten
+VERDICT:     FEHLT  (4.6 s)
+Begründung:  Die Komponentenliste enthält keine expliziten Positionen, die eine Hydrantenanlage mit einer Förderleistung von 1.600 l/min und einer Betriebszeit von 60 min beschreiben. Es fehlen spezifische Angaben zu Hydranten, Pumpenanlagen oder Vorratsbehältern, die diese Anforderung erfüllen.
+Lücken:      Es fehlt eine Hydrantenanlage mit einer Förderleistung von 1.600 l/min und einer Betriebszeit von 60 min, einschließlich der erforderlichen Pumpenanlagen und Vorratsbehälter.
+--------------------------------------------------------------------------------
+
+[QST-1]  VdS-Zulassung aller Anlagenteile, Errichteranerkennung, Prüfnachweise
+Kategorie:   Qualität & Inbetriebnahme
+VERDICT:     FEHLT  (4.4 s)
+Begründung:  Die Komponentenliste enthält keine Hinweise auf VdS-Zulassung aller Anlagenteile, Errichteranerkennung oder Prüfnachweise. Insbesondere fehlen Angaben zu einer bauaufsichtlich anerkannten Sachverständigenabnahme vor der Inbetriebnahme der Anlage.
+Lücken:      VdS-Zulassung aller Anlagenteile, Errichteranerkennung, Prüfnachweise und bauaufsichtlich anerkannte Sachverständigenabnahme fehlen komplett.
+--------------------------------------------------------------------------------
+

@@ -5,7 +5,10 @@ Startet mit:  streamlit run app.py
 """
 
 import io
+import re
+import tempfile
 import time
+from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
@@ -13,7 +16,6 @@ import streamlit as st
 from compare_rag import (
     MODEL,
     KONZEPT_PDF,
-    ANGEBOT_PDF,
     EMBEDDING_MODEL,
     MAX_WORKERS,
     run_abgleich,
@@ -21,14 +23,14 @@ from compare_rag import (
     COMPATIBILITY_CHECKS,
 )
 
-# ── Page config ──────────────────────────────────────────────────────────────
+# Page config 
 st.set_page_config(
     page_title="Angebotsabgleich – Löschanlagenkonzept",
     page_icon="⚙️",
     layout="wide",
 )
 
-# ── Verdict helpers ───────────────────────────────────────────────────────────
+# Verdict helpers 
 VERDICT_ICON  = {"ERFÜLLT": "✅", "TEILWEISE": "⚠️", "FEHLT": "❌", "UNKLAR": "❓"}
 VERDICT_COLOR = {
     "ERFÜLLT":  "#1a4d1a",  # dark green bg
@@ -64,12 +66,43 @@ def summary_color(text: str) -> str:
     return "#4caf50"
 
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+def format_bytes(size_bytes: int) -> str:
+    units = ["B", "KB", "MB", "GB"]
+    value = float(size_bytes)
+    for unit in units:
+        if value < 1024 or unit == units[-1]:
+            return f"{value:.2f} {unit}" if unit != "B" else f"{int(value)} B"
+        value /= 1024
+    return f"{size_bytes} B"
+
+
+def get_pdf_mod_timestamp(uploaded_file) -> str:
+    """Read PDF ModDate metadata if available; otherwise return 'unbekannt'."""
+    try:
+        text = uploaded_file.getvalue().decode("latin-1", errors="ignore")
+        match = re.search(r"/ModDate\s*\(([^\)]*)\)", text)
+        raw = match.group(1).strip() if match else ""
+        if not raw:
+            return "unbekannt"
+
+        raw = str(raw).strip()
+        if raw.startswith("D:"):
+            raw = raw[2:]
+        digits = "".join(ch for ch in raw if ch.isdigit())
+
+        if len(digits) >= 14:
+            dt = datetime.strptime(digits[:14], "%Y%m%d%H%M%S")
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        if len(digits) >= 8:
+            dt = datetime.strptime(digits[:8], "%Y%m%d")
+            return dt.strftime("%Y-%m-%d")
+    except Exception:
+        pass
+    return "unbekannt"
+
+
+# Sidebar
 with st.sidebar:
-    st.image(
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Fire_extinguisher.svg/64px-Fire_extinguisher.svg.png",
-        width=48,
-    )
     st.title("Einstellungen")
 
     st.markdown(f"**LLM:** `{MODEL}`")
@@ -87,15 +120,15 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("**Dokumente**")
     konzept_exists = Path(KONZEPT_PDF).exists()
-    angebot_exists = Path(ANGEBOT_PDF).exists()
     st.markdown(f"{'✅' if konzept_exists else '❌'} `{KONZEPT_PDF}`")
-    st.markdown(f"{'✅' if angebot_exists else '❌'} `{ANGEBOT_PDF}`")
+    st.markdown("Upload hinweis: Komponentenliste (PDF) pro Lauf")
 
     st.markdown("---")
     st.markdown(f"**Prüfpunkte:** {len(COMPATIBILITY_CHECKS)}")
+    st.markdown(f"**Version 2.0:** 28.03.2026 - Fewshot")
 
 
-# ── Header ─────────────────────────────────────────────────────────────────────
+# Header
 st.title("Angebotsabgleich – Löschanlagenkonzept")
 st.markdown(
     "Prüft automatisch, ob die **Komponentenliste** alle Anforderungen des "
@@ -106,21 +139,40 @@ col_k, col_a = st.columns(2)
 with col_k:
     st.info(f"**Konzept (Pflichtenheft):**  `{KONZEPT_PDF}`")
 with col_a:
-    st.info(f"**Angebot (Komponentenliste):**  `{ANGEBOT_PDF}`")
+    st.info("**Angebot (Komponentenliste):**  Wird per Upload bereitgestellt")
 
-if not konzept_exists or not angebot_exists:
+uploaded_angebot = st.file_uploader(
+    "Komponentenliste (Angebot) als PDF hochladen",
+    type=["pdf"],
+    help="Diese Datei wird nur für den aktuellen Lauf verwendet.",
+)
+
+if uploaded_angebot:
+    st.caption(f"Ausgewählte Datei: `{uploaded_angebot.name}`")
+    st.caption(
+        "Dateigröße: "
+        f"{format_bytes(uploaded_angebot.size)}"
+        " | Letzte Änderung (PDF-Metadaten): "
+        f"{get_pdf_mod_timestamp(uploaded_angebot)}"
+    )
+
+if not konzept_exists:
     st.error(
-        "Eine oder beide PDF-Dateien fehlen im Projektverzeichnis. "
-        f"Benötigt: `{KONZEPT_PDF}` und `{ANGEBOT_PDF}`"
+        "Die Konzept-PDF fehlt im Projektverzeichnis. "
+        f"Benötigt: `{KONZEPT_PDF}`"
     )
     st.stop()
 
 
-# ── Run button ─────────────────────────────────────────────────────────────────
+# Run button
 run_btn = st.button("▶ Abgleich starten", type="primary")
 
 if run_btn:
     st.session_state.pop("abgleich_data", None)
+
+    if uploaded_angebot is None:
+        st.error("Bitte lade zuerst eine Angebot-PDF hoch.")
+        st.stop()
 
     progress_bar = st.progress(0.0, text="Initialisiere …")
     status_box   = st.empty()
@@ -129,10 +181,17 @@ if run_btn:
         progress_bar.progress(min(frac, 1.0), text=msg)
         status_box.caption(msg)
 
+    tmp_pdf_path: Path | None = None
     try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
+            tmp_pdf.write(uploaded_angebot.getbuffer())
+            tmp_pdf_path = Path(tmp_pdf.name)
+
         data = run_abgleich(
             sleep_between=sleep_secs,
             progress_callback=on_progress,
+            angebot_pdf_path=tmp_pdf_path,
+            angebot_label=uploaded_angebot.name,
         )
         st.session_state["abgleich_data"] = data
         progress_bar.progress(1.0, text="Abgleich abgeschlossen")
@@ -141,8 +200,11 @@ if run_btn:
     except Exception as exc:
         st.error(f"Fehler beim Abgleich: {exc}")
         st.stop()
+    finally:
+        if tmp_pdf_path and tmp_pdf_path.exists():
+            tmp_pdf_path.unlink()
 
-# ── Results ────────────────────────────────────────────────────────────────────
+# Results
 if "abgleich_data" in st.session_state:
     data    = st.session_state["abgleich_data"]
     results = data["results"]
@@ -242,7 +304,7 @@ if "abgleich_data" in st.session_state:
     buf.write("=" * 80 + "\n")
     buf.write("ANGEBOTSABGLEICH – KOMPATIBILITÄTSPRÜFUNG\n")
     buf.write(f"Konzept:   {KONZEPT_PDF}\n")
-    buf.write(f"Angebot:   {ANGEBOT_PDF}\n")
+    buf.write(f"Angebot:   {data.get('angebot_pdf', 'Upload')}\n")
     buf.write(f"Modell:    {data['model']}\n")
     buf.write(f"Erstellt:  {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
     buf.write(f"Laufzeit:  {data['elapsed_total']} s\n")

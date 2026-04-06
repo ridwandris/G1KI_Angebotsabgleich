@@ -11,8 +11,10 @@ Verwendet auch von:  app.py (Streamlit-UI)
 """
 
 import os
+import sys
 import time
 import threading
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -24,10 +26,10 @@ from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-# ── Load .env file ────────────────────────────────────────────────────────────
+# Load .env file
 load_dotenv()
 
-# ── GWDG SAIA API configuration ──────────────────────────────────────────────
+# GWDG SAIA API configuration
 GWDG_API_KEY    = os.environ.get("GWDG_API_KEY", "")
 GWDG_BASE_URL   = os.environ.get("GWDG_BASE_URL", "https://chat-ai.academiccloud.de/v1")
 MODEL           = "llama-3.3-70b-instruct"
@@ -36,17 +38,16 @@ EMBEDDING_MODEL = "multilingual-e5-large-instruct"
 # Keep alias so any external reference still works
 MODEL_FLASH = MODEL
 
-# ── Concurrency settings ─────────────────────────────────────────────────────
+# Concurrency settings
 MAX_WORKERS = 5  # parallel LLM calls
 
-# ── File paths ─────────────────────────────────────────────────────────────────
+# File paths
 KONZEPT_PDF      = "Loeschanlagenkonzept.pdf"
 ANGEBOT_PDF      = "Komponentenliste.pdf"
 RESULTS_FILE     = "abgleich_ergebnis.txt"
 CHROMA_DIR_KONZEPT = ".chroma_konzept"
-CHROMA_DIR_ANGEBOT = ".chroma_angebot"
 
-# ── Structured compatibility checks ────────────────────────────────────────────
+# Structured compatibility checks
 COMPATIBILITY_CHECKS = [
     {
         "id": "SPR-1",
@@ -204,9 +205,39 @@ COMPATIBILITY_CHECKS = [
     },
 ]
 
+# Few-Shot Prompt for verdict and reasoning
 VERDICT_PROMPT = ChatPromptTemplate.from_template(
     "Du bist ein Brandschutzfachplaner und prüfst, ob ein Angebot die Anforderungen "
     "eines Löschanlagenkonzepts erfüllt.\n\n"
+    "HIER SIND DREI BEISPIELE ZUR ORIENTIERUNG (Few-Shot Prompting):\n\n"
+    "-- BEISPIEL 1 --\n"
+    "Kategorie: Wasserlöschanlagen\n"
+    "Prüfpunkt: Flächendeckender Sprinklerschutz Compartment 1\n"
+    "Konzept: Das Compartment 1 wird durch eine Sprinkler-Löschanlage geschützt. Auslegung: 7,5 mm/min.\n"
+    "Angebot: Pos. 1.1.1 Sprinkler 7,5mm/min Decke Regallager.\n"
+    "Antwort:\n"
+    "VERDICT: ERFÜLLT\n"
+    "BEGRÜNDUNG: Das Angebot enthält unter Pos. 1.1.1 die geforderten Sprinkler mit der korrekten Auslegungsrate von 7,5 mm/min für das Compartment 1.\n"
+    "LÜCKEN: keine\n\n"
+    "-- BEISPIEL 2 --\n"
+    "Kategorie: Gaslöschanlagen\n"
+    "Prüfpunkt: CO2-Löschanlage Compartment 2\n"
+    "Konzept: Innerhalb der Logistikhalle sollen 3 Bereiche (Compartments 2 und 3 sowie Kommissionierfläche) durch eine CO2-Niederdruck-Löschanlage geschützt werden.\n"
+    "Angebot: Pos. 2.1.1 Argon-Gaslöschanlage für Logistikhalle.\n"
+    "Antwort:\n"
+    "VERDICT: FEHLT\n"
+    "BEGRÜNDUNG: Das Konzept fordert explizit eine CO2-Niederdruck-Löschanlage. Das Angebot beinhaltet stattdessen eine Argon-Gaslöschanlage.\n"
+    "LÜCKEN: CO2-Niederdruck-Löschanlage fehlt komplett, falsches Löschmittel angeboten.\n\n"
+    "-- BEISPIEL 3 --\n"
+    "Kategorie: Brandmeldeanlagen\n"
+    "Prüfpunkt: Ansaugrauchmelder (RAS)\n"
+    "Konzept: Es sind 4 Ansaugrauchmelder (RAS) im Hochregallager vorzusehen.\n"
+    "Angebot: Pos 3.2.14 2x Ansaugrohr Raumüberwachung inkl. Zubehör.\n"
+    "Antwort:\n"
+    "VERDICT: TEILWEISE\n"
+    "BEGRÜNDUNG: Es werden Ansaugrohre zur Raumüberwachung angeboten (Pos. 3.2.14), jedoch reicht die angebotene Menge laut Text nicht für die geforderten 4 vollständigen Systeme aus.\n"
+    "LÜCKEN: Es fehlen weitere Ansaugrauchmelder (RAS) zur vollständigen Abdeckung.\n\n"
+    "--- ENDE DER BEISPIELE ---\n\n"
     "## Anforderung laut Löschanlagenkonzept\n"
     "Kategorie: {category}\n"
     "Prüfpunkt: {title}\n\n"
@@ -219,7 +250,7 @@ VERDICT_PROMPT = ChatPromptTemplate.from_template(
     "Bewerte, ob die Komponentenliste diese Anforderung erfüllt.\n"
     "Antworte NUR in diesem Format:\n\n"
     "VERDICT: <ERFÜLLT|TEILWEISE|FEHLT>\n"
-    "BEGRÜNDUNG: <1–3 prägnante Sätze mit konkreten Positionsnummern oder Textbelegen>\n"
+    "BEGRÜNDUNG: <1-3 prägnante Sätze mit konkreten Positionsnummern oder Textbelegen>\n"
     "LÜCKEN: <Falls TEILWEISE oder FEHLT: Was fehlt konkret? Sonst: keine>\n"
 )
 
@@ -246,7 +277,12 @@ def load_pdf(path: str | Path) -> list:
     return PyPDFLoader(str(path)).load()
 
 
-def build_vectorstore(docs: list, api_key: str, persist_dir: str | None = None):
+def build_vectorstore(
+    docs: list,
+    api_key: str,
+    persist_dir: str | None = None,
+    collection_name: str | None = None,
+):
     embeddings = OpenAIEmbeddings(
         model=EMBEDDING_MODEL,
         openai_api_key=api_key,
@@ -254,10 +290,15 @@ def build_vectorstore(docs: list, api_key: str, persist_dir: str | None = None):
     )
     if persist_dir and Path(persist_dir).exists():
         print(f"  Lade gespeicherte ChromaDB aus '{persist_dir}' …")
-        return Chroma(persist_directory=persist_dir, embedding_function=embeddings), []
+        kwargs = {"persist_directory": persist_dir, "embedding_function": embeddings}
+        if collection_name:
+            kwargs["collection_name"] = collection_name
+        return Chroma(**kwargs), []
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     chunks = splitter.split_documents(docs)
     kwargs = {"persist_directory": persist_dir} if persist_dir else {}
+    if collection_name:
+        kwargs["collection_name"] = collection_name
     return Chroma.from_documents(chunks, embeddings, **kwargs), chunks
 
 
@@ -320,9 +361,17 @@ def run_check(check, vs_konzept, vs_angebot, llm, sleep_between=2.0):
     }
 
 
-def run_abgleich(api_key=None, model_name=None, sleep_between=0.0, progress_callback=None):
+def run_abgleich(
+    api_key=None,
+    model_name=None,
+    sleep_between=0.0,
+    progress_callback=None,
+    angebot_pdf_path: str | Path | None = None,
+    angebot_label: str | None = None,
+):
     api_key    = api_key    or GWDG_API_KEY
     model_name = model_name or MODEL
+    angebot_pdf_path = Path(angebot_pdf_path or ANGEBOT_PDF)
     llm = ChatOpenAI(
         model=model_name,
         temperature=0,
@@ -333,12 +382,18 @@ def run_abgleich(api_key=None, model_name=None, sleep_between=0.0, progress_call
     if progress_callback:
         progress_callback(0.0, "Lade PDFs …")
     konzept_docs = load_pdf(KONZEPT_PDF)
-    angebot_docs = load_pdf(ANGEBOT_PDF)
+    angebot_docs = load_pdf(angebot_pdf_path)
 
     if progress_callback:
         progress_callback(0.05, "Erstelle Vektordatenbanken …")
     vs_konzept, _ = build_vectorstore(konzept_docs, api_key, CHROMA_DIR_KONZEPT)
-    vs_angebot, _ = build_vectorstore(angebot_docs, api_key, CHROMA_DIR_ANGEBOT)
+    # Angebot is dynamic per upload, so keep this vector store ephemeral (non-persistent).
+    session_id = str(uuid.uuid4())
+    vs_angebot, _ = build_vectorstore(
+        angebot_docs,
+        api_key,
+        collection_name=f"angebot_{session_id}",
+    )
 
     results = [None] * len(COMPATIBILITY_CHECKS)
     total = len(COMPATIBILITY_CHECKS)
@@ -347,7 +402,7 @@ def run_abgleich(api_key=None, model_name=None, sleep_between=0.0, progress_call
     if progress_callback:
         progress_callback(0.10, f"Starte {total} Prüfungen parallel (max {MAX_WORKERS} gleichzeitig) …")
 
-    # ── Run checks concurrently for speed ────────────────────────────────────
+    # Run checks concurrently for speed
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         future_to_info = {
             executor.submit(run_check, check, vs_konzept, vs_angebot, llm, sleep_between): (i, check)
@@ -392,6 +447,7 @@ def run_abgleich(api_key=None, model_name=None, sleep_between=0.0, progress_call
         "results": results,
         "summary": summary,
         "model": model_name,
+        "angebot_pdf": angebot_label or angebot_pdf_path.name,
         "elapsed_total": round(time.perf_counter() - t_start, 1),
     }
 
@@ -408,7 +464,7 @@ def save_report(data, output_path=RESULTS_FILE):
         f.write("=" * 80 + "\n")
         f.write("ANGEBOTSABGLEICH – KOMPATIBILITÄTSPRÜFUNG\n")
         f.write(f"Konzept:   {KONZEPT_PDF}\n")
-        f.write(f"Angebot:   {ANGEBOT_PDF}\n")
+        f.write(f"Angebot:   {data.get('angebot_pdf', ANGEBOT_PDF)}\n")
         f.write(f"Modell:    {data['model']}\n")
         f.write(f"Erstellt:  {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"Laufzeit:  {data['elapsed_total']} s\n")
@@ -435,7 +491,7 @@ def save_report(data, output_path=RESULTS_FILE):
     return output_path
 
 
-# ── CLI ────────────────────────────────────────────────────────────────────────
+# CLI Entry Point
 if __name__ == "__main__":
     api_key = ensure_api_key()
     ICONS = {"ERFÜLLT": "✅", "TEILWEISE": "⚠️ ", "FEHLT": "❌", "UNKLAR": "❓"}
@@ -444,16 +500,28 @@ if __name__ == "__main__":
         bar = "#" * int(frac * 30)
         print(f"\r  [{bar:<30}] {msg:<70}", end="", flush=True)
 
-    print(f"\n🔍  Angebotsabgleich – {KONZEPT_PDF} vs. {ANGEBOT_PDF}")
+    # Default fallback
+    test_angebot_pfad = "TestDaten_Angebot/Komponentenliste.pdf"
+
+    # Override if the user provides a file path in the terminal
+    if len(sys.argv) > 1:
+        test_angebot_pfad = sys.argv[1]
+
+    print(f"\nAngebotsabgleich – {KONZEPT_PDF} vs. {test_angebot_pfad}")
     print(f"    API: GWDG SAIA  |  Modell: {MODEL}  |  Embedding: {EMBEDDING_MODEL}")
     print(f"    Parallel: max {MAX_WORKERS} gleichzeitige Prüfungen\n")
 
     for model in [MODEL]:
         print(f"\n{'='*60}\nModell: {model}\n{'='*60}")
-        data = run_abgleich(api_key, model_name=model, progress_callback=cli_progress)
+        data = run_abgleich(
+            api_key,
+            model_name=model,
+            progress_callback=cli_progress,
+            angebot_pdf_path=test_angebot_pfad,
+        )
         print()
         out = save_report(data, f"abgleich_{model.replace('-','_').replace('.','_')}.txt")
-        print(f"\n📄  Bericht: {out}\n")
+        print(f"\nBERICHT: {out}\n")
         counts: dict = {}
         for r in data["results"]:
             icon = ICONS.get(r["verdict"], "❓")
